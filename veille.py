@@ -149,27 +149,42 @@ def paris(d):
         return d
 
 
-def card(it):
+def card(it, feat=False, n=0):
     d = paris(it["date"])
     e = html.escape
     label = f"{JOURS[d.weekday()]} {d.day} {MOIS[d.month - 1]}"
     summ = f'<p>{e(it["summary"])}</p>' if it["summary"] else ""
+    cls = f"it feat g{n % 3}" if feat else "it"
     return (
-        f'<article class="it" data-cat="{it["cat"]}" data-text="{e((it["title"] + " " + it["src"]).lower(), quote=True)}">'
+        f'<article class="{cls}" data-cat="{it["cat"]}" data-text="{e((it["title"] + " " + it["src"]).lower(), quote=True)}">'
         f'<div class="meta"><span class="src">{e(it["src"])}</span><span class="lang">{it["lang"]}</span>'
         f'<time datetime="{it["date"].strftime("%Y-%m-%d")}">{label}</time></div>'
         f'<h3><a href="{e(it["link"], quote=True)}" target="_blank" rel="noopener noreferrer">{e(it["title"])}</a></h3>{summ}</article>'
     )
 
 
+def pick_featured(week):
+    """Les 3 plus récents, de sources différentes si possible."""
+    feat, used = [], set()
+    for i in week:
+        if i["src"] not in used and len(feat) < 3:
+            feat.append(i)
+            used.add(i["src"])
+    return feat
+
+
 def render(items, failed, now):
     d = paris(now)
-    stamp = f"{JOURS_L[d.weekday()]} {d.day} {MOIS_L[d.month - 1]} {d.year}, {d.hour:02d}:{d.minute:02d}"
+    stamp = f"{JOURS_L[d.weekday()]} {d.day} {MOIS_L[d.month - 1]} {d.year}"
     week = [i for i in items if i["period"] == "week"]
     prev = [i for i in items if i["period"] == "prev"]
+    feat = pick_featured(week)
+    rest = [i for i in week if i not in feat]
     body = ""
-    if week:
-        body += '<section class="grp"><h2>Cette semaine</h2><div class="list">' + "".join(card(i) for i in week) + "</div></section>"
+    if feat:
+        body += '<section class="grp"><h2>À la une</h2><div class="featgrid">' + "".join(card(i, True, n) for n, i in enumerate(feat)) + "</div></section>"
+    if rest:
+        body += '<section class="grp"><h2>Cette semaine</h2><div class="list">' + "".join(card(i) for i in rest) + "</div></section>"
     if prev:
         body += '<section class="grp"><h2>La semaine précédente</h2><div class="list">' + "".join(card(i) for i in prev) + "</div></section>"
     if not body:
@@ -192,53 +207,72 @@ TEMPLATE = r"""<!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Veille IA"><meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#0f1420">
+<meta name="apple-mobile-web-app-title" content="Veille IA"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="data:image/png;base64,%%ICON%%"><link rel="icon" href="data:image/png;base64,%%ICON%%">
 <title>Veille IA</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
-:root{--bg:#eef1f5;--surface:#fff;--surface2:#e6eaf0;--line:#d3d9e3;--line2:#bcc5d3;--fg:#141a26;--dim:#566177;--accent:#1d5fd1;--focus:#1d5fd1;
---fd:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;--fb:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1119;--surface:#161c28;--surface2:#1f2736;--line:#2a3447;--line2:#3b475e;--fg:#eef1f6;--dim:#9aa7bd;--accent:#6aa5ff;--focus:#7db0ff;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0d1119;--surface:#161c28;--surface2:#1f2736;--line:#2a3447;--line2:#3b475e;--fg:#eef1f6;--dim:#9aa7bd;--accent:#6aa5ff;--focus:#7db0ff;color-scheme:dark}
+:root{--bg:#f5f5f7;--surface:#fff;--fg:#1d1d1f;--dim:#6e6e73;--line:rgba(0,0,0,.1);--accent:#0071e3;--glass:rgba(245,245,247,.72);--pill:rgba(0,0,0,.06);
+--g0:#0a84ff;--g1:#bf5af2;--g2:#ff9f0a;--t1:#0071e3;--t2:#a550e0;--t3:#ff2d55;
+--font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--surface:#1c1c1e;--fg:#f5f5f7;--dim:#a1a1a6;--line:rgba(255,255,255,.14);--accent:#2997ff;--glass:rgba(0,0,0,.72);--pill:rgba(255,255,255,.12);--t1:#2997ff;--t2:#bf5af2;--t3:#ff375f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--surface:#1c1c1e;--fg:#f5f5f7;--dim:#a1a1a6;--line:rgba(255,255,255,.14);--accent:#2997ff;--glass:rgba(0,0,0,.72);--pill:rgba(255,255,255,.12);--t1:#2997ff;--t2:#bf5af2;--t3:#ff375f;color-scheme:dark}
 *{box-sizing:border-box}[hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--fb);-webkit-font-smoothing:antialiased;
-padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:env(safe-area-inset-top,0px);padding-bottom:max(40px,env(safe-area-inset-bottom,0px))}
-.wrap{max-width:820px;margin:0 auto}
-:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
-header{padding:28px 0 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-h1{font:700 clamp(44px,10vw,72px)/.95 var(--fd);text-transform:uppercase;margin:6px 0 0;text-wrap:balance}
-.sub{color:var(--dim);margin:12px 0 0;max-width:58ch}
-.themebtn{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:18px;cursor:pointer}
-.tools{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:12px 0;margin-top:14px;z-index:5;border-bottom:1px solid var(--line);display:grid;gap:10px}
-.fl{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.fl::-webkit-scrollbar{display:none}
-.f{flex:none;height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line2);background:transparent;color:var(--fg);font:600 14.5px var(--fb);cursor:pointer}
-.f[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
-#q{width:100%;height:44px;border-radius:12px;border:1.5px solid var(--line2);background:var(--surface);color:var(--fg);font:16px var(--fb);padding:0 14px}
-.grp{margin-top:30px}
-h2{font:700 28px var(--fd);text-transform:uppercase;letter-spacing:.02em;margin:0 0 12px}
-.list{display:grid;gap:10px}
-.it{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+body{background:var(--bg);color:var(--fg);font:17px/1.47 var(--font);letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:max(48px,env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);z-index:30}
+.wrap{max-width:1040px;margin:0 auto}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.hero{text-align:center;padding:calc(64px + env(safe-area-inset-top,0px)) 0 36px}
+.eyebrow{font-size:17px;font-weight:600;color:var(--dim);letter-spacing:0}
+h1{font-size:clamp(64px,17vw,136px);font-weight:700;letter-spacing:-.045em;line-height:1;margin:10px 0 0;
+background:linear-gradient(100deg,var(--t1),var(--t2) 55%,var(--t3));-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:.08em}
+.sub{font-size:clamp(19px,3.4vw,26px);line-height:1.3;font-weight:500;color:var(--dim);max-width:30ch;margin:18px auto 0;letter-spacing:-.015em;text-wrap:balance}
+.tools{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
+.tools-in{max-width:1040px;margin:0 auto;display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+.row{display:flex;gap:8px;align-items:center;min-width:0}
+.fl{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;padding:3px;background:var(--pill);border-radius:999px}.fl::-webkit-scrollbar{display:none}
+.f{flex:none;height:36px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--dim);font:500 14.5px var(--font);cursor:pointer;letter-spacing:-.005em}
+.f[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.themebtn{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--pill);color:var(--fg);font-size:18px;cursor:pointer}
+#q{width:100%;height:44px;border-radius:12px;border:0;background:var(--pill);color:var(--fg);font:17px var(--font);padding:0 14px}
+#q::placeholder{color:var(--dim)}
+.grp{margin-top:64px}
+h2{font-size:clamp(32px,6vw,48px);font-weight:700;letter-spacing:-.035em;line-height:1.08;margin:0 0 22px}
+.featgrid,.list{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:760px){.featgrid{grid-template-columns:repeat(3,1fr)}.list{grid-template-columns:repeat(2,1fr)}}
+.it{position:relative;background:var(--surface);border-radius:24px;padding:22px 24px 24px;transition:transform .25s ease;animation:rise .6s ease both}
+.it:hover{transform:scale(1.012)}
+.it h3 a::after{content:"";position:absolute;inset:0;border-radius:24px}
 .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--dim)}
-.src{font-weight:700;color:var(--fg)}
-.lang{border:1px solid var(--line2);border-radius:5px;padding:0 5px;font-size:11px;font-weight:700;letter-spacing:.06em}
+.src{font-weight:600;color:var(--fg);letter-spacing:0}
+.lang{border-radius:6px;background:var(--pill);padding:1px 6px;font-size:11px;font-weight:600}
 time{margin-left:auto;font-variant-numeric:tabular-nums}
-.it h3{margin:6px 0 0;font:600 18px/1.3 var(--fb);text-wrap:balance}
-.it h3 a{color:var(--fg);text-decoration:none}.it h3 a:hover{color:var(--accent);text-decoration:underline}
-.it p{margin:6px 0 0;color:var(--dim);font-size:15px}
-.empty,.none{color:var(--dim);margin-top:30px}
-footer{margin-top:40px;border-top:1px solid var(--line);padding-top:16px;color:var(--dim);font-size:13.5px}
+.it h3{margin:10px 0 0;font-size:21px;font-weight:600;line-height:1.22;letter-spacing:-.022em;text-wrap:balance}
+.it h3 a{color:var(--fg);text-decoration:none}
+.it p{margin:10px 0 0;color:var(--dim);font-size:15.5px;line-height:1.45}
+.feat{min-height:300px;display:flex;flex-direction:column;padding:26px 26px 30px;border-radius:30px}
+.feat h3::after{content:none}.feat h3 a::after{border-radius:30px}
+.feat h3{font-size:clamp(26px,4.2vw,31px);letter-spacing:-.03em;line-height:1.12;font-weight:700;margin-top:auto;padding-top:32px}
+.feat .meta{margin-bottom:0}
+.feat p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.feat.g0{background:linear-gradient(165deg,color-mix(in srgb,var(--g0) 30%,var(--surface)),var(--surface) 78%)}
+.feat.g1{background:linear-gradient(165deg,color-mix(in srgb,var(--g1) 30%,var(--surface)),var(--surface) 78%)}
+.feat.g2{background:linear-gradient(165deg,color-mix(in srgb,var(--g2) 30%,var(--surface)),var(--surface) 78%)}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.it{animation:none;transition:none}}
+.empty,.none{color:var(--dim);margin-top:48px;text-align:center}
+footer{margin-top:72px;border-top:1px solid var(--line);padding-top:20px;color:var(--dim);font-size:13px;text-align:center;line-height:1.6}
 </style></head><body><div class="wrap">
-<header><div><div class="eyebrow">Mise à jour le %%STAMP%%</div><h1>Veille IA</h1>
-<p class="sub">Les derniers articles des labos, de la presse et des newsletters, sélectionnés automatiquement. Nouvelle édition chaque lundi.</p></div>
-<button type="button" class="themebtn" id="th" aria-label="Changer de thème">◐</button></header>
-<div class="tools"><div class="fl" role="group" aria-label="Filtrer par type de source">%%FILTERS%%</div>
-<input id="q" type="search" placeholder="Rechercher dans les titres" aria-label="Rechercher dans les titres"></div>
+<header class="hero"><div class="eyebrow">Édition du %%STAMP%%</div><h1>Veille IA</h1>
+<p class="sub">Ce qui compte cette semaine dans l’intelligence artificielle.</p></header>
+<div class="tools"><div class="tools-in"><div class="row"><div class="fl" role="group" aria-label="Filtrer par type de source">%%FILTERS%%</div>
+<button type="button" class="themebtn" id="th" aria-label="Changer de thème">◐</button></div>
+<input id="q" type="search" placeholder="Rechercher" aria-label="Rechercher dans les titres"></div></div>
 <main id="main">%%BODY%%<p class="none" id="none" hidden>Aucun article ne correspond.</p></main>
-<footer>%%COUNT%% articles · %%FOOT%%. Les titres et extraits viennent des sources et appartiennent à leurs auteurs.</footer></div>
+<footer>%%COUNT%% articles · %%FOOT%%.<br>Nouvelle édition chaque lundi. Les titres et extraits appartiennent à leurs auteurs.</footer></div>
 <script>
 (function(){
 var cat='tous',q='',items=[].slice.call(document.querySelectorAll('.it'));
