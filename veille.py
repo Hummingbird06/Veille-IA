@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Veille IA : récupère les flux RSS/Atom de la liste SOURCES et génère veille/index.html.
+"""Veille IA : récupère les flux RSS/Atom de la liste SOURCES et génère index.html.
 
 Aucune dépendance à installer (bibliothèque standard de Python uniquement).
 Pour ajouter ou retirer une source, modifie simplement la liste SOURCES ci-dessous.
@@ -37,7 +37,7 @@ CATS = [("tous", "Tout"), ("labs", "Labos et modèles"), ("news", "Actualité"),
 MAX_THIS_WEEK = 5      # articles max par source sur les 7 derniers jours
 MAX_PREVIOUS = 2       # articles max par source sur les 7 jours d'avant
 UA = "Mozilla/5.0 (compatible; veille-ia/1.0)"
-OUT = Path(__file__).resolve().parent / "veille" / "index.html"
+OUT = Path(__file__).resolve().parent / "index.html"
 
 JOURS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."]
 MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
